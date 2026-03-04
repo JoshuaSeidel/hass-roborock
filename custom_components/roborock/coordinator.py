@@ -595,12 +595,21 @@ class RoborockB01Q10UpdateCoordinator(RoborockDataUpdateCoordinatorB01):
         try:
             await self.api.refresh()
         except RoborockException as ex:
-            _LOGGER.debug("Failed to update Q10 data: %s", ex)
+            _LOGGER.error("Failed to update Q10 data: %s (type: %s)", ex, type(ex).__name__)
             raise UpdateFailed(
                 translation_domain=DOMAIN,
                 translation_key="update_data_fail",
             ) from ex
+        except Exception as ex:
+            _LOGGER.error("Unexpected error updating Q10 data: %s (type: %s)", ex, type(ex).__name__, exc_info=True)
+            raise UpdateFailed(
+                translation_domain=DOMAIN,
+                translation_key="update_data_fail",
+            ) from ex
+
         # Return the status as the data
+        if self.api.status is None:
+            _LOGGER.warning("Q10 status is None after refresh")
         return self.api.status
 
     async def async_shutdown(self) -> None:

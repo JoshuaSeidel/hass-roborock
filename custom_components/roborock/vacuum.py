@@ -532,26 +532,26 @@ class RoborockQ10Vacuum(RoborockCoordinatedEntityB01Q10, StateVacuumEntity):
     async def async_pause(self) -> None:
         """Pause the vacuum."""
         try:
-            await self.coordinator.api.vacuum.pause()
+            await self.coordinator.api.vacuum.pause_clean()
         except RoborockException as err:
             raise HomeAssistantError(
                 translation_domain=DOMAIN,
                 translation_key="command_failed",
                 translation_placeholders={
-                    "command": "pause",
+                    "command": "pause_clean",
                 },
             ) from err
 
     async def async_stop(self, **kwargs: Any) -> None:
         """Stop the vacuum."""
         try:
-            await self.coordinator.api.vacuum.stop()
+            await self.coordinator.api.vacuum.stop_clean()
         except RoborockException as err:
             raise HomeAssistantError(
                 translation_domain=DOMAIN,
                 translation_key="command_failed",
                 translation_placeholders={
-                    "command": "stop",
+                    "command": "stop_clean",
                 },
             ) from err
 
@@ -571,13 +571,14 @@ class RoborockQ10Vacuum(RoborockCoordinatedEntityB01Q10, StateVacuumEntity):
     async def async_locate(self, **kwargs: Any) -> None:
         """Locate vacuum."""
         try:
-            await self.coordinator.api.vacuum.find_device()
+            # Q10 uses the command API for find/locate
+            await self.coordinator.api.command.send("app_find_device", {})
         except RoborockException as err:
             raise HomeAssistantError(
                 translation_domain=DOMAIN,
                 translation_key="command_failed",
                 translation_placeholders={
-                    "command": "find_device",
+                    "command": "app_find_device",
                 },
             ) from err
 
@@ -594,7 +595,7 @@ class RoborockQ10Vacuum(RoborockCoordinatedEntityB01Q10, StateVacuumEntity):
                 "super": 8,
             }
             if fan_speed in fan_mapping:
-                await self.coordinator.api.vacuum.set_fan_speed(fan_mapping[fan_speed])
+                await self.coordinator.api.vacuum.set_fan_level(fan_mapping[fan_speed])
         except RoborockException as err:
             raise HomeAssistantError(
                 translation_domain=DOMAIN,
