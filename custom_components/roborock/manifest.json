@@ -1,7 +1,7 @@
 {
   "domain": "roborock",
   "name": "Roborock (Extended B01 Support)",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "codeowners": ["@JoshuaSeidel"],
   "config_flow": true,
   "dhcp": [
