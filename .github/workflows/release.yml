@@ -1,0 +1,43 @@
+name: Release
+
+on:
+  release:
+    types: [published]
+
+jobs:
+  release:
+    name: Prepare release
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Get version from manifest
+        id: get_version
+        run: |
+          version=$(jq -r '.version' custom_components/roborock/manifest.json)
+          echo "version=$version" >> $GITHUB_OUTPUT
+
+      - name: Validate version matches tag
+        run: |
+          tag_version="${GITHUB_REF#refs/tags/v}"
+          manifest_version="${{ steps.get_version.outputs.version }}"
+          if [ "$tag_version" != "$manifest_version" ]; then
+            echo "Version mismatch: tag v$tag_version != manifest $manifest_version"
+            exit 1
+          fi
+
+      - name: Create ZIP file
+        run: |
+          cd custom_components/roborock
+          zip -r ../../roborock-${{ steps.get_version.outputs.version }}.zip ./*
+
+      - name: Upload release asset
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ github.event.release.upload_url }}
+          asset_path: ./roborock-${{ steps.get_version.outputs.version }}.zip
+          asset_name: roborock-${{ steps.get_version.outputs.version }}.zip
+          asset_content_type: application/zip
