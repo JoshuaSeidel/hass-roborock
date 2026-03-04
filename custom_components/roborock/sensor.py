@@ -34,6 +34,7 @@ from homeassistant.helpers.typing import StateType
 
 from .coordinator import (
     RoborockB01Q7UpdateCoordinator,
+    RoborockB01Q10UpdateCoordinator,
     RoborockConfigEntry,
     RoborockDataUpdateCoordinator,
     RoborockDataUpdateCoordinatorA01,
@@ -43,6 +44,7 @@ from .coordinator import (
 from .entity import (
     RoborockCoordinatedEntityA01,
     RoborockCoordinatedEntityB01Q7,
+    RoborockCoordinatedEntityB01Q10,
     RoborockCoordinatedEntityV1,
     RoborockEntity,
 )
@@ -449,6 +451,12 @@ async def async_setup_entry(
         for description in Q7_B01_SENSOR_DESCRIPTIONS
         if description.value_fn(coordinator.data) is not None
     )
+    entities.extend(
+        RoborockSensorEntityB01Q10(coordinator, description)
+        for coordinator in coordinators.b01_q10
+        for description in Q7_B01_SENSOR_DESCRIPTIONS
+        if description.value_fn(coordinator.data) is not None
+    )
     async_add_entities(entities)
 
 
@@ -545,6 +553,26 @@ class RoborockSensorEntityB01Q7(RoborockCoordinatedEntityB01Q7, SensorEntity):
     def __init__(
         self,
         coordinator: RoborockB01Q7UpdateCoordinator,
+        description: RoborockSensorDescriptionB01,
+    ) -> None:
+        """Initialize the entity."""
+        self.entity_description = description
+        super().__init__(f"{description.key}_{coordinator.duid_slug}", coordinator)
+
+    @property
+    def native_value(self) -> StateType:
+        """Return the value reported by the sensor."""
+        return self.entity_description.value_fn(self.coordinator.data)
+
+
+class RoborockSensorEntityB01Q10(RoborockCoordinatedEntityB01Q10, SensorEntity):
+    """Representation of a B01 Q10 Roborock sensor."""
+
+    entity_description: RoborockSensorDescriptionB01
+
+    def __init__(
+        self,
+        coordinator: RoborockB01Q10UpdateCoordinator,
         description: RoborockSensorDescriptionB01,
     ) -> None:
         """Initialize the entity."""

@@ -37,6 +37,7 @@ from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
 from .const import DOMAIN, MAP_SLEEP
 from .coordinator import (
     RoborockB01Q7UpdateCoordinator,
+    RoborockB01Q10UpdateCoordinator,
     RoborockConfigEntry,
     RoborockDataUpdateCoordinator,
     RoborockDataUpdateCoordinatorA01,
@@ -44,6 +45,7 @@ from .coordinator import (
 from .entity import (
     RoborockCoordinatedEntityA01,
     RoborockCoordinatedEntityB01Q7,
+    RoborockCoordinatedEntityB01Q10,
     RoborockCoordinatedEntityV1,
 )
 
@@ -261,6 +263,12 @@ async def async_setup_entry(
         if (options := description.options_lambda(coordinator.api)) is not None
     )
     async_add_entities(
+        RoborockB01Q10SelectEntity(coordinator, description, options)
+        for coordinator in config_entry.runtime_data.b01_q10
+        for description in B01_SELECT_DESCRIPTIONS
+        if (options := description.options_lambda(coordinator.api)) is not None
+    )
+    async_add_entities(
         RoborockSelectEntityA01(coordinator, description)
         for coordinator in config_entry.runtime_data.a01
         for description in A01_SELECT_DESCRIPTIONS
@@ -277,6 +285,45 @@ class RoborockB01SelectEntity(RoborockCoordinatedEntityB01Q7, SelectEntity):
     def __init__(
         self,
         coordinator: RoborockB01Q7UpdateCoordinator,
+        entity_description: RoborockB01SelectDescription,
+        options: list[str],
+    ) -> None:
+        """Initialize the entity."""
+        self.entity_description = entity_description
+        super().__init__(
+            f"{entity_description.key}_{coordinator.duid_slug}", coordinator
+        )
+        self._attr_options = options
+
+    async def async_select_option(self, option: str) -> None:
+        """Set the option."""
+        try:
+            await self.entity_description.api_fn(self.coordinator.api, option)
+        except RoborockException as err:
+            raise HomeAssistantError(
+                translation_domain=DOMAIN,
+                translation_key="command_failed",
+                translation_placeholders={
+                    "command": self.entity_description.key,
+                },
+            ) from err
+        await self.coordinator.async_refresh()
+
+    @property
+    def current_option(self) -> str | None:
+        """Return the current option."""
+        return self.entity_description.value_fn(self.coordinator.data)
+
+
+class RoborockB01Q10SelectEntity(RoborockCoordinatedEntityB01Q10, SelectEntity):
+    """Select entity for Roborock B01 Q10 devices."""
+
+    entity_description: RoborockB01SelectDescription
+    coordinator: RoborockB01Q10UpdateCoordinator
+
+    def __init__(
+        self,
+        coordinator: RoborockB01Q10UpdateCoordinator,
         entity_description: RoborockB01SelectDescription,
         options: list[str],
     ) -> None:
