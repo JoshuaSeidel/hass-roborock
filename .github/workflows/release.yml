@@ -4,6 +4,9 @@ on:
   release:
     types: [published]
 
+permissions:
+  contents: write
+
 jobs:
   release:
     name: Prepare release
@@ -30,14 +33,15 @@ jobs:
       - name: Create ZIP file
         run: |
           cd custom_components/roborock
-          zip -r ../../roborock-${{ steps.get_version.outputs.version }}.zip ./*
+          zip -r ../../roborock-${{ steps.get_version.outputs.version }}.zip ./* -x "*.pyc" -x "__pycache__/*"
 
       - name: Upload release asset
-        uses: actions/upload-release-asset@v1
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ github.event.release.upload_url }}
-          asset_path: ./roborock-${{ steps.get_version.outputs.version }}.zip
-          asset_name: roborock-${{ steps.get_version.outputs.version }}.zip
-          asset_content_type: application/zip
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          # Check if asset already exists
+          if gh release view ${{ github.ref_name }} --json assets --jq '.assets[].name' | grep -q "roborock-${{ steps.get_version.outputs.version }}.zip"; then
+            echo "Asset already exists, skipping upload"
+          else
+            gh release upload ${{ github.ref_name }} roborock-${{ steps.get_version.outputs.version }}.zip
+          fi
