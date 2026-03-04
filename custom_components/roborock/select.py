@@ -21,6 +21,12 @@ from roborock.data import (
     ZeoTemperature,
 )
 from roborock.data.b01_q10.b01_q10_containers import Q10Status
+from roborock.data.b01_q10.b01_q10_code_mappings import (
+    B01_Q10_DP,
+    YXCleanType,
+    YXFanLevel,
+    YXWaterLevel,
+)
 from roborock.devices.traits.b01 import Q7PropertiesApi
 from roborock.devices.traits.v1 import PropertiesApi
 from roborock.devices.traits.v1.home import HomeTrait
@@ -130,6 +136,40 @@ B01_SELECT_DESCRIPTIONS: list[RoborockB01SelectDescription] = [
         api_fn=lambda api, value: api.set_mode(CleanTypeMapping.from_value(value)),
         value_fn=lambda data: data.mode.value if data.mode else None,
         options_lambda=lambda _: list(CleanTypeMapping.keys()),
+        entity_category=EntityCategory.CONFIG,
+    ),
+]
+
+Q10_B01_SELECT_DESCRIPTIONS: list[RoborockSelectDescriptionB01Q10] = [
+    RoborockSelectDescriptionB01Q10(
+        key="clean_mode",
+        translation_key="cleaning_mode",
+        api_fn=lambda api, value: api.vacuum.set_clean_mode(
+            YXCleanType[value.upper().replace(" ", "_")]
+        ),
+        value_fn=lambda data: data.clean_mode.name.lower().replace("_", " ") if data.clean_mode else None,
+        options=["both work", "only sweep", "only mop"],
+        entity_category=EntityCategory.CONFIG,
+    ),
+    RoborockSelectDescriptionB01Q10(
+        key="fan_level",
+        translation_key="fan_speed",
+        api_fn=lambda api, value: api.vacuum.set_fan_level(
+            YXFanLevel[value.upper()]
+        ),
+        value_fn=lambda data: data.fan_level.name.lower() if data.fan_level else None,
+        options=["close", "quiet", "normal", "strong", "max", "super"],
+        entity_category=EntityCategory.CONFIG,
+    ),
+    RoborockSelectDescriptionB01Q10(
+        key="water_level",
+        translation_key="water_flow",
+        api_fn=lambda api, value: api.command.send(
+            B01_Q10_DP.WATER_LEVEL,
+            YXWaterLevel[value.upper()].value
+        ),
+        value_fn=lambda data: data.water_level.name.lower() if data.water_level else None,
+        options=["close", "low", "middle", "high"],
         entity_category=EntityCategory.CONFIG,
     ),
 ]
@@ -277,8 +317,11 @@ async def async_setup_entry(
         for description in B01_SELECT_DESCRIPTIONS
         if (options := description.options_lambda(coordinator.api)) is not None
     )
-    # Q10 select entities not yet implemented - API methods unknown
-    # TODO: Add Q10 select support once Q10PropertiesApi set methods are documented
+    async_add_entities(
+        RoborockB01Q10SelectEntity(coordinator, description)
+        for coordinator in config_entry.runtime_data.b01_q10
+        for description in Q10_B01_SELECT_DESCRIPTIONS
+    )
     async_add_entities(
         RoborockSelectEntityA01(coordinator, description)
         for coordinator in config_entry.runtime_data.a01
@@ -329,21 +372,20 @@ class RoborockB01SelectEntity(RoborockCoordinatedEntityB01Q7, SelectEntity):
 class RoborockB01Q10SelectEntity(RoborockCoordinatedEntityB01Q10, SelectEntity):
     """Select entity for Roborock B01 Q10 devices."""
 
-    entity_description: RoborockB01SelectDescription
+    entity_description: RoborockSelectDescriptionB01Q10
     coordinator: RoborockB01Q10UpdateCoordinator
 
     def __init__(
         self,
         coordinator: RoborockB01Q10UpdateCoordinator,
-        entity_description: RoborockB01SelectDescription,
-        options: list[str],
+        entity_description: RoborockSelectDescriptionB01Q10,
     ) -> None:
         """Initialize the entity."""
         self.entity_description = entity_description
         super().__init__(
             f"{entity_description.key}_{coordinator.duid_slug}", coordinator
         )
-        self._attr_options = options
+        self._attr_options = entity_description.options
 
     async def async_select_option(self, option: str) -> None:
         """Set the option."""
