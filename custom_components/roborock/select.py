@@ -20,6 +20,7 @@ from roborock.data import (
     ZeoSpin,
     ZeoTemperature,
 )
+from roborock.data.b01_q10.b01_q10_containers import Q10Status
 from roborock.devices.traits.b01 import Q7PropertiesApi
 from roborock.devices.traits.v1 import PropertiesApi
 from roborock.devices.traits.v1.home import HomeTrait
@@ -86,6 +87,20 @@ class RoborockB01SelectDescription(SelectEntityDescription):
 
     options_lambda: Callable[[Q7PropertiesApi], list[str] | None]
     """Function to get all options of the select entity or returns None if not supported."""
+
+
+@dataclass(frozen=True, kw_only=True)
+class RoborockSelectDescriptionB01Q10(SelectEntityDescription):
+    """Class to describe a Roborock B01 Q10 select entity."""
+
+    api_fn: Callable[[Any, str], Awaitable[Any]]
+    """Function to call the API."""
+
+    value_fn: Callable[[Q10Status], str | None]
+    """Function to get the current value of the select entity."""
+
+    options: list[str]
+    """List of available options."""
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -262,12 +277,8 @@ async def async_setup_entry(
         for description in B01_SELECT_DESCRIPTIONS
         if (options := description.options_lambda(coordinator.api)) is not None
     )
-    async_add_entities(
-        RoborockB01Q10SelectEntity(coordinator, description, options)
-        for coordinator in config_entry.runtime_data.b01_q10
-        for description in B01_SELECT_DESCRIPTIONS
-        if (options := description.options_lambda(coordinator.api)) is not None
-    )
+    # Q10 select entities not yet implemented - API methods unknown
+    # TODO: Add Q10 select support once Q10PropertiesApi set methods are documented
     async_add_entities(
         RoborockSelectEntityA01(coordinator, description)
         for coordinator in config_entry.runtime_data.a01

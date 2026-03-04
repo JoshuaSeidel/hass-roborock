@@ -19,6 +19,7 @@ from roborock.data import (
     ZeoError,
     ZeoState,
 )
+from roborock.data.b01_q10.b01_q10_containers import Q10Status
 from roborock.roborock_message import RoborockDyadDataProtocol, RoborockZeoProtocol
 
 from homeassistant.components.sensor import (
@@ -77,6 +78,13 @@ class RoborockSensorDescriptionB01(SensorEntityDescription):
     """A class that describes Roborock B01 sensors."""
 
     value_fn: Callable[[B01Props], StateType]
+
+
+@dataclass(frozen=True, kw_only=True)
+class RoborockSensorDescriptionB01Q10(SensorEntityDescription):
+    """A class that describes Roborock B01 Q10 sensors."""
+
+    value_fn: Callable[[Q10Status], StateType]
 
 
 def _dock_error_value_fn(state: DeviceState) -> str | None:
@@ -406,6 +414,49 @@ Q7_B01_SENSOR_DESCRIPTIONS = [
     ),
 ]
 
+Q10_B01_SENSOR_DESCRIPTIONS = [
+    RoborockSensorDescriptionB01Q10(
+        key="battery",
+        value_fn=lambda data: data.battery,
+        entity_category=EntityCategory.DIAGNOSTIC,
+        native_unit_of_measurement=PERCENTAGE,
+        device_class=SensorDeviceClass.BATTERY,
+    ),
+    RoborockSensorDescriptionB01Q10(
+        key="status",
+        value_fn=lambda data: data.status.name if data.status else None,
+        translation_key="q10_status",
+        entity_category=EntityCategory.DIAGNOSTIC,
+        device_class=SensorDeviceClass.ENUM,
+        options=["idle", "cleaning", "charging", "paused", "error"],
+    ),
+    RoborockSensorDescriptionB01Q10(
+        key="clean_time",
+        value_fn=lambda data: data.clean_time,
+        native_unit_of_measurement=UnitOfTime.SECONDS,
+        suggested_unit_of_measurement=UnitOfTime.MINUTES,
+        device_class=SensorDeviceClass.DURATION,
+        translation_key="cleaning_time",
+        entity_category=EntityCategory.DIAGNOSTIC,
+    ),
+    RoborockSensorDescriptionB01Q10(
+        key="clean_area",
+        value_fn=lambda data: data.clean_area,
+        native_unit_of_measurement=UnitOfArea.SQUARE_CENTIMETERS,
+        suggested_unit_of_measurement=UnitOfArea.SQUARE_METERS,
+        device_class=SensorDeviceClass.DISTANCE,
+        translation_key="cleaning_area",
+        entity_category=EntityCategory.DIAGNOSTIC,
+    ),
+    RoborockSensorDescriptionB01Q10(
+        key="cleaning_progress",
+        value_fn=lambda data: data.cleaning_progress,
+        native_unit_of_measurement=PERCENTAGE,
+        translation_key="cleaning_progress",
+        entity_category=EntityCategory.DIAGNOSTIC,
+    ),
+]
+
 
 async def async_setup_entry(
     hass: HomeAssistant,
@@ -454,7 +505,7 @@ async def async_setup_entry(
     entities.extend(
         RoborockSensorEntityB01Q10(coordinator, description)
         for coordinator in coordinators.b01_q10
-        for description in Q7_B01_SENSOR_DESCRIPTIONS
+        for description in Q10_B01_SENSOR_DESCRIPTIONS
         if description.value_fn(coordinator.data) is not None
     )
     async_add_entities(entities)
@@ -568,12 +619,12 @@ class RoborockSensorEntityB01Q7(RoborockCoordinatedEntityB01Q7, SensorEntity):
 class RoborockSensorEntityB01Q10(RoborockCoordinatedEntityB01Q10, SensorEntity):
     """Representation of a B01 Q10 Roborock sensor."""
 
-    entity_description: RoborockSensorDescriptionB01
+    entity_description: RoborockSensorDescriptionB01Q10
 
     def __init__(
         self,
         coordinator: RoborockB01Q10UpdateCoordinator,
-        description: RoborockSensorDescriptionB01,
+        description: RoborockSensorDescriptionB01Q10,
     ) -> None:
         """Initialize the entity."""
         self.entity_description = description

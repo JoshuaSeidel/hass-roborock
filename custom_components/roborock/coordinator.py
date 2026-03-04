@@ -10,6 +10,7 @@ from typing import Any, TypeVar
 from propcache.api import cached_property
 from roborock import B01Props
 from roborock.data import HomeDataScene
+from roborock.data.b01_q10.b01_q10_containers import Q10Status
 from roborock.devices.device import RoborockDevice
 from roborock.devices.traits.a01 import DyadApi, ZeoApi
 from roborock.devices.traits.b01 import Q7PropertiesApi
@@ -572,8 +573,13 @@ class RoborockB01Q7UpdateCoordinator(RoborockDataUpdateCoordinatorB01):
         return data
 
 
-class RoborockB01Q10UpdateCoordinator(RoborockDataUpdateCoordinatorB01):
+class RoborockB01Q10UpdateCoordinator(DataUpdateCoordinator[Q10Status]):
     """Coordinator for B01 Q10 devices."""
+
+    api: Q10PropertiesApi
+    device: RoborockDevice
+    duid_slug: str
+    device_info: DeviceInfo
 
     def __init__(
         self,
@@ -583,14 +589,22 @@ class RoborockB01Q10UpdateCoordinator(RoborockDataUpdateCoordinatorB01):
         api: Q10PropertiesApi,
     ) -> None:
         """Initialize."""
-        super().__init__(hass, config_entry, device)
+        self.device = device
         self.api = api
+        self.duid_slug = slugify(device.duid)
+        self.device_info = get_device_info(device)
+        super().__init__(
+            hass,
+            _LOGGER,
+            name=f"{device.duid}_q10_coordinator",
+            update_interval=timedelta(seconds=30),
+        )
 
     async def _async_setup(self) -> None:
         """Set up the coordinator."""
         await self.api.start()
 
-    async def _async_update_data(self) -> B01Props:
+    async def _async_update_data(self) -> Q10Status:
         """Update data via library."""
         try:
             await self.api.refresh()
