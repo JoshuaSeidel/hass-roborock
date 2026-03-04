@@ -1,9 +1,5 @@
 {
   "name": "Roborock (Extended B01 Support)",
-  "content_in_root": false,
-  "filename": "roborock",
   "render_readme": true,
-  "homeassistant": "2026.3.0",
-  "zip_release": true,
-  "hide_default_branch": false
+  "homeassistant": "2026.3.0"
 }
