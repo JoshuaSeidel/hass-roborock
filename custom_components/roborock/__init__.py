@@ -23,7 +23,7 @@ from roborock.mqtt.session import MqttSessionUnauthorized
 from homeassistant.const import CONF_USERNAME, EVENT_HOMEASSISTANT_STOP
 from homeassistant.core import Event, HomeAssistant
 from homeassistant.exceptions import ConfigEntryAuthFailed, ConfigEntryNotReady
-from homeassistant.helpers import config_validation as cv, device_registry as dr
+from homeassistant.helpers import config_validation as cv, device_registry as dr, entity_registry as er
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from homeassistant.helpers.typing import ConfigType
 
@@ -183,6 +183,9 @@ async def async_setup_entry(hass: HomeAssistant, entry: RoborockConfigEntry) -> 
         v1_coords, a01_coords, b01_q7_coords, b01_q10_coords
     )
 
+    # Clean up any stale entities from previous versions
+    await async_cleanup_entities(hass, entry)
+
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
     _remove_stale_devices(hass, entry, devices)
@@ -197,6 +200,85 @@ def _is_device_disabled(
     """Check if a device is disabled in the device registry."""
     device_entry = device_registry.async_get_device(identifiers={(DOMAIN, device.duid)})
     return device_entry is not None and device_entry.disabled
+
+
+async def async_cleanup_entities(
+    hass: HomeAssistant, entry: RoborockConfigEntry
+) -> None:
+    """Remove stale entities that no longer match current entity structure."""
+    entity_registry = er.async_get(hass)
+
+    # Get all entities for this config entry
+    entries = er.async_entries_for_config_entry(entity_registry, entry.entry_id)
+
+    # Track valid unique IDs that should exist
+    valid_unique_ids = set()
+
+    # Build list of valid unique IDs from coordinators
+    for coord in entry.runtime_data.v1:
+        duid_slug = coord.duid_slug
+        # Valid v1 entities - add patterns as needed
+        valid_unique_ids.update({
+            f"battery_{duid_slug}",
+            f"status_{duid_slug}",
+            f"current_room_{duid_slug}",
+            # Add more as needed
+        })
+
+    for coord in entry.runtime_data.b01_q7:
+        duid_slug = coord.duid_slug
+        # Valid Q7 entities
+        valid_unique_ids.update({
+            f"q7_status_{duid_slug}",
+            f"main_brush_time_left_{duid_slug}",
+            f"side_brush_time_left_{duid_slug}",
+            f"filter_time_left_{duid_slug}",
+            f"sensor_time_left_{duid_slug}",
+            f"mop_life_time_left_{duid_slug}",
+            f"water_flow_{duid_slug}",
+            f"cleaning_mode_{duid_slug}",
+        })
+
+    for coord in entry.runtime_data.b01_q10:
+        duid_slug = coord.duid_slug
+        # Valid Q10 entities
+        valid_unique_ids.update({
+            f"battery_{duid_slug}",
+            f"status_{duid_slug}",
+            f"clean_time_{duid_slug}",
+            f"clean_area_{duid_slug}",
+            f"cleaning_progress_{duid_slug}",
+            f"clean_mode_{duid_slug}",
+            f"fan_level_{duid_slug}",
+            f"water_level_{duid_slug}",
+        })
+
+    # Remove entities with unique IDs that don't match expected patterns
+    for entity_entry in entries:
+        if entity_entry.unique_id not in valid_unique_ids:
+            # Only remove if it looks like it might be from this integration
+            # Check if it's a roborock entity by looking for common patterns
+            if any(
+                key in entity_entry.unique_id
+                for key in [
+                    "battery_",
+                    "status_",
+                    "clean_time_",
+                    "clean_area_",
+                    "cleaning_progress_",
+                    "clean_mode_",
+                    "fan_level_",
+                    "water_level_",
+                    "water_flow_",
+                    "cleaning_mode_",
+                ]
+            ):
+                _LOGGER.info(
+                    "Removing stale entity %s (unique_id: %s)",
+                    entity_entry.entity_id,
+                    entity_entry.unique_id,
+                )
+                entity_registry.async_remove(entity_entry.entity_id)
 
 
 def _remove_stale_devices(
