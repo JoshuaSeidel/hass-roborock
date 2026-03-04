@@ -143,6 +143,7 @@ B01_SELECT_DESCRIPTIONS: list[RoborockB01SelectDescription] = [
 Q10_B01_SELECT_DESCRIPTIONS: list[RoborockSelectDescriptionB01Q10] = [
     RoborockSelectDescriptionB01Q10(
         key="clean_mode",
+        name="Cleaning mode",
         translation_key="cleaning_mode",
         api_fn=lambda api, value: api.vacuum.set_clean_mode(
             YXCleanType[value.upper().replace(" ", "_")]
@@ -153,6 +154,7 @@ Q10_B01_SELECT_DESCRIPTIONS: list[RoborockSelectDescriptionB01Q10] = [
     ),
     RoborockSelectDescriptionB01Q10(
         key="fan_level",
+        name="Fan speed",
         translation_key="fan_speed",
         api_fn=lambda api, value: api.vacuum.set_fan_level(
             YXFanLevel[value.upper()]
@@ -163,6 +165,7 @@ Q10_B01_SELECT_DESCRIPTIONS: list[RoborockSelectDescriptionB01Q10] = [
     ),
     RoborockSelectDescriptionB01Q10(
         key="water_level",
+        name="Water flow",
         translation_key="water_flow",
         api_fn=lambda api, value: api.command.send(
             B01_Q10_DP.WATER_LEVEL,

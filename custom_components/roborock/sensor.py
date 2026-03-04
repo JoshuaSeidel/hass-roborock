@@ -417,6 +417,7 @@ Q7_B01_SENSOR_DESCRIPTIONS = [
 Q10_B01_SENSOR_DESCRIPTIONS = [
     RoborockSensorDescriptionB01Q10(
         key="battery",
+        name="Battery",
         value_fn=lambda data: data.battery,
         entity_category=EntityCategory.DIAGNOSTIC,
         native_unit_of_measurement=PERCENTAGE,
@@ -424,6 +425,7 @@ Q10_B01_SENSOR_DESCRIPTIONS = [
     ),
     RoborockSensorDescriptionB01Q10(
         key="status",
+        name="Status",
         value_fn=lambda data: data.status.name if data.status else None,
         translation_key="q10_status",
         entity_category=EntityCategory.DIAGNOSTIC,
@@ -432,6 +434,7 @@ Q10_B01_SENSOR_DESCRIPTIONS = [
     ),
     RoborockSensorDescriptionB01Q10(
         key="clean_time",
+        name="Cleaning time",
         value_fn=lambda data: data.clean_time,
         native_unit_of_measurement=UnitOfTime.SECONDS,
         suggested_unit_of_measurement=UnitOfTime.MINUTES,
@@ -441,6 +444,7 @@ Q10_B01_SENSOR_DESCRIPTIONS = [
     ),
     RoborockSensorDescriptionB01Q10(
         key="clean_area",
+        name="Cleaning area",
         value_fn=lambda data: data.clean_area,
         native_unit_of_measurement=UnitOfArea.SQUARE_CENTIMETERS,
         suggested_unit_of_measurement=UnitOfArea.SQUARE_METERS,
@@ -450,6 +454,7 @@ Q10_B01_SENSOR_DESCRIPTIONS = [
     ),
     RoborockSensorDescriptionB01Q10(
         key="cleaning_progress",
+        name="Cleaning progress",
         value_fn=lambda data: data.cleaning_progress,
         native_unit_of_measurement=PERCENTAGE,
         translation_key="cleaning_progress",
